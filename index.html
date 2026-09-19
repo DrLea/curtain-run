@@ -1,0 +1,423 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover,user-scalable=no">
+<meta name="theme-color" content="#0E3A40">
+<meta name="description" content="Quiz runner: dash through the curtained door with the right answer.">
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="icon" type="image/png" href="icons/favicon-64.png">
+<link rel="apple-touch-icon" href="icons/apple-touch-icon.png">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="Curtain Run">
+<title>Curtain Run</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bungee&family=Bricolage+Grotesque:opsz,wght@12..96,400;12..96,600;12..96,800&family=JetBrains+Mono:wght@500;700&display=swap">
+<style>
+:root{
+  --sky:#0E3A40; --gold:#F2C14E; --velvet:#B3263A; --velvet-d:#6E1426;
+  --paper:#F4ECDD; --paper2:#E9DDC6; --ink:#13292B; --ink2:#46605F;
+  --mint:#2FA878; --mint-l:#DDF2E7; --line:#CDBD9F; --danger:#B3263A; --tf-true:#1F8A5B; --tf-false:#B3263A;
+  --display:"Bungee","Impact",system-ui,sans-serif;
+  --ui:"Bricolage Grotesque",ui-sans-serif,system-ui,-apple-system,"Segoe UI",sans-serif;
+  --mono:"JetBrains Mono",ui-monospace,Menlo,Consolas,monospace;
+  color-scheme: light;
+}
+html{height:100%;box-sizing:border-box;overscroll-behavior:none}
+*,*::before,*::after{box-sizing:inherit}
+body{height:100%;margin:0;overflow:hidden;overscroll-behavior:none;-webkit-user-select:none;user-select:none;background:var(--sky);color:var(--ink);font:15px/1.45 var(--ui);-webkit-tap-highlight-color:transparent}
+#app{position:relative;height:100%;overflow:hidden}
+#cv{position:absolute;inset:0;width:100%;height:100%;display:block;touch-action:none}
+button,input,textarea,select{font:inherit;color:inherit}
+input,textarea,.sheet,.panel p,.review{-webkit-user-select:text;user-select:text}
+button{cursor:pointer}
+:focus-visible{outline:3px solid var(--gold);outline-offset:2px}
+
+/* markdown */
+.md strong{font-weight:800}
+.md mark{background:var(--gold);color:var(--ink);border-radius:4px;padding:0 3px}
+.md code{font-family:var(--mono);font-size:.9em;background:rgba(19,41,43,.1);border-radius:4px;padding:0 4px}
+.md .c{font-weight:800}
+.md u{text-decoration-thickness:2px;text-underline-offset:2px}
+
+/* buttons */
+.btn{appearance:none;border:2px solid var(--ink);background:var(--paper);color:var(--ink);border-radius:12px;padding:10px 16px;font-weight:700;box-shadow:0 3px 0 var(--ink);transition:transform .08s,box-shadow .08s;display:inline-flex;align-items:center;justify-content:center;gap:8px;white-space:nowrap}
+.btn:active{transform:translateY(3px);box-shadow:0 0 0 var(--ink)}
+.btn.primary{background:var(--velvet);color:var(--paper)}
+.btn.gold{background:var(--gold)}
+.btn.small{padding:6px 11px;font-size:13px;border-radius:10px;box-shadow:0 2px 0 var(--ink)}
+.btn.ghost{box-shadow:none;background:transparent;border-color:var(--line)}
+.btn.warn{color:var(--danger);border-color:var(--danger);box-shadow:0 2px 0 var(--danger)}
+.btn[disabled]{opacity:.45;pointer-events:none}
+.btn.big{font-size:19px;padding:14px 22px}
+.btn[aria-pressed="true"].like{background:var(--gold)}
+
+/* screens */
+.screen{position:absolute;inset:0;overflow-y:auto;padding:max(16px,env(safe-area-inset-top,0px)) 16px max(24px,env(safe-area-inset-bottom,0px))}
+.float{display:flex;align-items:center;justify-content:center}
+.panel{background:var(--paper);border:2px solid var(--ink);border-radius:18px;box-shadow:0 6px 0 var(--ink);padding:22px;width:100%;max-width:460px;margin:auto}
+#scr-menu{display:flex;flex-direction:column;align-items:center;gap:18px;padding-top:max(7vh,24px)}
+.logo{font-family:var(--display);color:var(--paper);font-size:clamp(40px,11vw,86px);line-height:.92;text-align:center;letter-spacing:.01em;text-shadow:0 4px 0 var(--velvet-d),0 8px 0 rgba(0,0,0,.25);margin:0}
+.logo span{color:var(--gold)}
+.tag{color:var(--paper);opacity:.92;text-align:center;margin:0;font-size:16px;max-width:36ch;text-shadow:0 1px 2px rgba(0,0,0,.4)}
+.menu-card{display:grid;gap:16px}
+.stats{display:grid;grid-template-columns:repeat(3,1fr);gap:8px}
+.stat{background:var(--paper2);border-radius:12px;padding:10px 8px;text-align:center}
+.stat b{display:block;font-family:var(--mono);font-size:22px;font-variant-numeric:tabular-nums}
+.stat small{font-size:11px;text-transform:uppercase;letter-spacing:.08em;color:var(--ink2)}
+.menu-actions{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+.menu-actions .btn.big{grid-column:1/-1}
+.toggles{display:flex;gap:8px;flex-wrap:wrap}
+.tog{flex:1;border:2px solid var(--line);background:transparent;border-radius:10px;padding:6px 10px;font-weight:700;font-size:13px;display:flex;justify-content:space-between;gap:8px}
+.tog span{font-family:var(--mono);color:var(--ink2)}
+.tog[aria-pressed="true"]{border-color:var(--ink)}
+.tog[aria-pressed="true"] span{color:var(--mint)}
+.recent{margin:0;padding:0;list-style:none;display:grid;gap:4px;font-size:13px}
+.recent li{display:flex;justify-content:space-between;gap:10px;padding:6px 2px;border-bottom:1px dashed var(--line)}
+.recent li span:first-child{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.recent .n{font-family:var(--mono);font-variant-numeric:tabular-nums}
+h2{font-family:var(--display);font-weight:400;font-size:24px;margin:0;letter-spacing:.01em}
+h3{margin:0;font-size:16px}
+.muted{color:var(--ink2)}
+.eyebrow{font-size:11px;text-transform:uppercase;letter-spacing:.1em;color:var(--ink2);font-weight:700}
+
+/* sheets */
+.sheet{background:var(--paper)}
+.sheet-inner{max-width:760px;margin:0 auto;display:grid;gap:16px}
+.sheet-top{display:flex;align-items:center;gap:10px;flex-wrap:wrap;position:sticky;top:0;background:var(--paper);padding-block:10px;z-index:3;border-bottom:2px solid var(--ink)}
+.sheet-top h2{flex:1;min-width:0}
+.tabs{display:flex;gap:6px;background:var(--paper2);padding:4px;border-radius:12px;width:max-content;max-width:100%}
+.tabs button{border:0;background:transparent;padding:8px 14px;border-radius:9px;font-weight:700}
+.tabs button[aria-selected="true"]{background:var(--ink);color:var(--paper)}
+.toolbar{display:flex;gap:8px;flex-wrap:wrap;align-items:center}
+.packs{display:grid;gap:10px}
+.pack{border:2px solid var(--ink);border-radius:14px;padding:14px;display:grid;gap:10px;background:#FBF6EC}
+.pack-head{display:flex;gap:10px;align-items:flex-start;justify-content:space-between;flex-wrap:wrap}
+.pack-head h3{font-size:17px}
+.pack p{margin:0;font-size:14px}
+.meta{display:flex;gap:6px;flex-wrap:wrap;align-items:center;font-size:12px}
+.chip{display:inline-flex;align-items:center;gap:4px;padding:2px 8px;border-radius:99px;font-weight:700;font-size:11px;letter-spacing:.04em;text-transform:uppercase;border:1.5px solid currentColor}
+.chip.mine{color:var(--ink)} .chip.dl{color:#2F6B6A} .chip.starter{color:#8C6A1E} .chip.pub{color:var(--mint)}
+.actions{display:flex;gap:6px;flex-wrap:wrap}
+.empty{border:2px dashed var(--line);border-radius:14px;padding:22px;text-align:center;color:var(--ink2)}
+.sel{border:2px solid var(--ink);border-radius:10px;background:#FFFBF3;padding:6px 8px;font-size:13px;font-weight:600}
+
+/* editor */
+.field{display:grid;gap:4px}
+.field label{font-weight:700;font-size:13px}
+.inp{width:100%;border:2px solid var(--ink);border-radius:10px;background:#FFFBF3;padding:9px 11px;min-width:0}
+textarea.inp{resize:vertical}
+.mdbar{position:sticky;top:62px;z-index:2;display:flex;gap:6px;flex-wrap:wrap;align-items:center;background:var(--ink);color:var(--paper);border-radius:12px;padding:6px 8px}
+.mdbar button{border:0;background:rgba(244,236,221,.12);color:var(--paper);border-radius:8px;min-width:34px;height:32px;padding:0 8px;font-weight:700}
+.mdbar button:hover{background:rgba(244,236,221,.25)}
+.mdbar .sw{min-width:26px;width:26px;height:26px;border-radius:50%;background:var(--c);border:2px solid var(--paper)}
+.mdbar .lbl{font-size:12px;opacity:.75;margin-right:2px}
+.mdbar .sep{width:1px;height:22px;background:rgba(244,236,221,.3)}
+.qed{border:2px solid var(--ink);border-radius:14px;padding:12px;display:grid;gap:10px;background:#FBF6EC}
+.qed-head{display:flex;align-items:center;gap:8px;flex-wrap:wrap}
+.qed-head .qn{font-family:var(--mono);font-weight:700;background:var(--ink);color:var(--paper);border-radius:8px;padding:2px 8px;font-size:13px}
+.qed-head .sp{flex:1}
+.cnt{font-size:11px;color:var(--ink2);justify-self:end;font-family:var(--mono)}
+.cnt.over{color:var(--danger);font-weight:700}
+.chrow{display:grid;grid-template-columns:auto auto 1fr auto;gap:8px;align-items:center}
+.chrow .ltr{font-family:var(--display);font-size:14px;width:26px;height:26px;border-radius:50%;display:grid;place-items:center;background:var(--gold);border:2px solid var(--ink)}
+.chrow input[type=radio],.chrow input[type=checkbox]{width:20px;height:20px;accent-color:var(--mint)}
+.chrow.ok .inp{border-color:var(--mint);background:var(--mint-l)}
+.chrow.tf .inp{font-weight:800;color:#fff;border-color:var(--ink)}
+.chrow.tf.t .inp{background:var(--tf-true)} .chrow.tf.f .inp{background:var(--tf-false)}
+.chrow.tf.ok .inp{outline:3px solid var(--gold);outline-offset:1px}
+.x{border:0;background:transparent;font-size:20px;line-height:1;padding:4px 8px;color:var(--ink2)}
+.prev{border:1.5px dashed var(--line);border-radius:10px;padding:8px 10px;font-size:14px;display:grid;gap:6px;background:#FFFBF3}
+.prev .pq{font-weight:700}
+.prev .pc{display:flex;flex-wrap:wrap;gap:6px}
+.prev .pc span{border:1.5px solid var(--ink);border-radius:8px;padding:1px 8px;font-size:13px}
+.prev .pc span.ok{background:var(--mint-l);border-color:var(--mint)}
+.hint{font-size:12px;color:var(--ink2);margin:0}
+.err{color:var(--danger);font-size:13px;font-weight:600;margin:0}
+.savebar{position:sticky;bottom:0;background:var(--paper);border-top:2px solid var(--ink);padding-block:12px;display:flex;gap:10px;justify-content:flex-end;flex-wrap:wrap;align-items:center;z-index:2}
+.savebar .err{flex:1;min-width:160px}
+.savebar .err:empty{display:none}
+
+/* pick */
+.pick-list{display:grid;gap:8px;max-height:46vh;overflow-y:auto;padding:2px}
+.pick{display:flex;gap:10px;align-items:center;border:2px solid var(--line);border-radius:12px;padding:10px 12px;background:#FBF6EC;text-align:left;width:100%}
+.pick[aria-pressed="true"]{border-color:var(--ink);background:var(--gold)}
+.pick b{flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.pick span{font-family:var(--mono);font-size:12px}
+.seg{display:grid;grid-template-columns:1fr 1fr;gap:6px;background:var(--paper2);border-radius:12px;padding:4px}
+.seg button{border:0;border-radius:9px;background:transparent;padding:8px;font-weight:700;display:grid;gap:0}
+.seg button small{font-weight:400;font-size:11px;color:var(--ink2)}
+.seg button[aria-pressed="true"]{background:var(--ink);color:var(--paper)}
+.seg button[aria-pressed="true"] small{color:var(--paper2)}
+
+/* HUD */
+#hud{position:absolute;inset:0;pointer-events:none;padding:max(10px,env(safe-area-inset-top,0px)) 16px 0;display:flex;flex-direction:column;align-items:center;gap:10px}
+#hud[hidden]{display:none}
+.hud-row{width:100%;max-width:760px;display:flex;align-items:center;gap:8px}
+.pill{background:rgba(19,41,43,.74);color:var(--paper);border-radius:99px;padding:6px 12px;font-family:var(--mono);font-weight:700;font-size:14px;font-variant-numeric:tabular-nums;display:flex;gap:6px;align-items:center;backdrop-filter:blur(4px);white-space:nowrap}
+.pill small{font-family:var(--ui);font-weight:600;font-size:10px;letter-spacing:.08em;text-transform:uppercase;opacity:.75}
+.pill.fever{background:linear-gradient(90deg,#E0782E,#F2C14E,#E0782E);background-size:200% 100%;color:var(--ink);animation:fev 1s linear infinite}
+@keyframes fev{to{background-position:200% 0}}
+.hud-row .sp{flex:1}
+.hbtn{pointer-events:auto;width:40px;height:40px;border-radius:50%;padding:0}
+.qcard{pointer-events:auto;width:100%;max-width:640px;background:var(--paper);border:2px solid var(--ink);border-radius:16px;box-shadow:0 5px 0 var(--ink);padding:12px 14px;display:grid;gap:9px;transition:opacity .2s,transform .2s}
+.qcard.idle{opacity:0;transform:translateY(-8px)}
+.qcard.boss{border-color:#8C6A1E;box-shadow:0 5px 0 #8C6A1E,0 0 0 4px rgba(242,193,78,.55)}
+.qtop{display:flex;justify-content:space-between;align-items:center;gap:8px;font-size:12px}
+.qtags{display:flex;gap:6px;align-items:center;flex-wrap:wrap}
+.qtop .qc{font-family:var(--mono);font-weight:700}
+.qt{font-size:10px;font-weight:800;letter-spacing:.08em;text-transform:uppercase;border-radius:99px;padding:2px 8px;background:var(--paper2)}
+.qt.boss{background:var(--gold);border:1.5px solid var(--ink)}
+.qt.hard{background:var(--velvet);color:#fff} .qt.easy{background:var(--mint-l);color:#1E6B4C}
+.qt.multi{background:#2F6B6A;color:#fff} .qt.tf{background:var(--ink);color:#fff}
+.qtop .secs{font-family:var(--mono);font-weight:700;font-variant-numeric:tabular-nums}
+#qText{font-weight:600;font-size:clamp(17px,4.4vw,23px);line-height:1.2;margin:0;text-wrap:balance}
+.bar{height:8px;border-radius:99px;background:var(--paper2);overflow:hidden;border:1.5px solid var(--ink)}
+.bar i{display:block;height:100%;width:100%;background:var(--mint);transform-origin:left;transition:background .3s}
+.bar i.low{background:var(--velvet)}
+.qchips{display:grid;grid-template-columns:repeat(var(--n,3),1fr);gap:6px}
+.qchip{border:2px solid var(--ink);border-radius:10px;background:#FBF6EC;padding:6px;display:flex;gap:6px;align-items:center;font-size:13px;font-weight:600;text-align:left;min-width:0;line-height:1.15;transition:opacity .3s}
+.qchip b.l{font-family:var(--display);font-weight:400;flex:none;width:22px;height:22px;border-radius:50%;display:grid;place-items:center;background:var(--gold);border:1.5px solid var(--ink);font-size:12px}
+.qchip .t{overflow:hidden;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow-wrap:anywhere}
+.qchip.tft b.l{background:var(--tf-true);color:#fff} .qchip.tff b.l{background:var(--tf-false);color:#fff}
+.qchip.here{background:var(--ink);color:var(--paper)}
+.qchip.here .md code{background:rgba(244,236,221,.2)}
+.qchip.right{background:var(--mint);color:#fff}
+.qchip.wrong{background:var(--velvet);color:#fff}
+.qchip.here .md .c,.qchip.right .md .c,.qchip.wrong .md .c{background:#FBF6EC;border-radius:4px;padding:0 3px}
+.qchip.gone{opacity:.35;text-decoration:line-through}
+.qchip.hidden .t{color:transparent;background:repeating-linear-gradient(90deg,var(--line) 0 8px,transparent 8px 12px);border-radius:4px}
+#qExplain{margin:0;font-size:14px;border-top:1.5px dashed var(--line);padding-top:8px}
+#powers{position:absolute;left:16px;bottom:max(16px,env(safe-area-inset-bottom,0px));display:flex;gap:6px;flex-wrap:wrap;pointer-events:none;max-width:calc(100% - 32px)}
+#banner{position:absolute;left:50%;top:54%;transform:translate(-50%,-50%);font-family:var(--display);font-size:clamp(26px,7vw,46px);color:var(--paper);text-shadow:0 3px 0 var(--ink);pointer-events:none;text-align:center;opacity:0;transition:opacity .25s;white-space:nowrap}
+#banner small{display:block;font-family:var(--ui);font-weight:800;font-size:clamp(14px,3.6vw,19px);text-shadow:0 2px 0 var(--ink);white-space:normal;max-width:80vw;margin-inline:auto}
+#banner.on{opacity:1}
+
+/* results */
+.big-score{font-family:var(--mono);font-size:54px;font-weight:700;line-height:1;text-align:center;font-variant-numeric:tabular-nums}
+.newbest{justify-self:center;background:var(--gold);border:2px solid var(--ink);border-radius:99px;padding:3px 12px;font-weight:800;font-size:13px}
+.review{margin:0;padding:0;list-style:none;display:grid;gap:6px;max-height:30vh;overflow-y:auto;font-size:13px}
+.review li{border-left:4px solid var(--mint);padding:5px 10px;background:#FBF6EC;border-radius:0 8px 8px 0;display:grid;gap:2px}
+.review li.bad{border-left-color:var(--velvet)}
+.review .ex{color:var(--ink2);font-size:12px}
+
+/* modal + toast */
+#modal{position:absolute;inset:0;background:rgba(10,30,32,.6);display:flex;align-items:center;justify-content:center;padding:16px;z-index:20}
+#modal[hidden]{display:none}
+#modal .panel{max-width:580px;display:grid;gap:12px;max-height:100%;overflow-y:auto}
+pre.code{background:var(--ink);color:var(--paper);border-radius:10px;padding:10px 12px;font:12px/1.5 var(--mono);overflow-x:auto;margin:0}
+#toast{position:absolute;left:50%;bottom:max(20px,env(safe-area-inset-bottom,0px));transform:translate(-50%,20px);background:var(--ink);color:var(--paper);padding:10px 16px;border-radius:12px;font-weight:700;opacity:0;transition:.25s;pointer-events:none;z-index:30;max-width:calc(100% - 32px);text-align:center}
+#toast.on{opacity:1;transform:translate(-50%,0)}
+.acct-row{display:flex;gap:8px;flex-wrap:wrap}
+.acct-row .btn{flex:1}
+#acctBody p{margin:0}
+.code-inp{font:700 26px/1 var(--mono);letter-spacing:.35em;text-align:center}
+.help-grid{display:grid;gap:9px;font-size:14px}
+.help-grid div{display:flex;gap:10px;align-items:flex-start}
+.help-grid .ic{flex:none;width:26px;text-align:center}
+kbd{font-family:var(--mono);font-size:12px;border:1.5px solid var(--ink);border-bottom-width:3px;border-radius:6px;padding:1px 6px;background:#FFFBF3;white-space:nowrap}
+.row{display:flex;gap:10px;flex-wrap:wrap}
+.row>.btn{flex:1}
+@media (max-width:520px){
+  .panel{padding:16px}
+  .qchips{grid-template-columns:repeat(2,1fr)}
+  .qchips[data-n="3"] .qchip:last-child{grid-column:1/-1}
+  .hide-narrow{display:none}
+  .mdbar{top:58px}
+}
+@media (prefers-reduced-motion:reduce){*{transition:none!important;animation:none!important}}
+</style>
+
+
+<style>[hidden]{display:none!important}</style>
+</head>
+<body>
+<div id="app">
+  <canvas id="cv" aria-label="Game view"></canvas>
+
+  <div id="hud" hidden>
+    <div class="hud-row">
+      <div class="pill"><small>Score</small><span id="hScore">0</span></div>
+      <div class="pill" id="hStreakWrap"><small id="hStreakLbl">Streak</small><span id="hStreak">0</span></div>
+      <span class="sp"></span>
+      <div class="pill hide-narrow"><small>Speed</small><span id="hSpeed">0</span></div>
+      <button class="btn small hbtn" id="btnMute" aria-label="Mute">♪</button>
+      <button class="btn small hbtn" id="btnPause" aria-label="Pause">❚❚</button>
+    </div>
+    <div class="qcard idle" id="qcard">
+      <div class="qtop"><div class="qtags"><span class="qc" id="qCount">Q1</span><span id="qTags" class="qtags"></span></div><span class="secs" id="qSecs">6.0s</span></div>
+      <p id="qText" class="md">Get ready…</p>
+      <div class="bar"><i id="qBar"></i></div>
+      <div class="qchips" id="qChips"></div>
+      <p id="qExplain" class="md" hidden></p>
+    </div>
+  </div>
+  <div id="powers"></div>
+  <div id="banner"></div>
+
+  <section id="scr-menu" class="screen">
+    <h1 class="logo">CURTAIN<br><span>RUN</span></h1>
+    <p class="tag">Run the track, read the question, dash through the right curtain. Pick wrong and a rock slows you down.</p>
+    <div class="panel menu-card">
+      <div class="stats">
+        <div class="stat"><b id="mBest">0</b><small>Best score</small></div>
+        <div class="stat"><b id="mRuns">0</b><small>Runs</small></div>
+        <div class="stat"><b id="mAcc">–</b><small>Accuracy</small></div>
+      </div>
+      <div class="menu-actions">
+        <button class="btn primary big" id="btnPlay">▶ Play</button>
+        <button class="btn" id="btnLib">Library</button>
+        <button class="btn" id="btnHelp">How to play</button>
+      </div>
+      <div class="acct-row" id="acctRow" hidden>
+        <button class="btn small" id="btnAccount" hidden>☁ Sign in to sync</button>
+        <button class="btn small gold" id="btnInstall" hidden>⤓ Install app</button>
+      </div>
+      <div class="toggles">
+        <button class="tog" id="togMusic" aria-pressed="true">Music <span>ON</span></button>
+        <button class="tog" id="togSfx" aria-pressed="true">Sounds <span>ON</span></button>
+      </div>
+      <div>
+        <div class="eyebrow" style="margin-bottom:4px">Recent runs</div>
+        <ul class="recent" id="mRecent"></ul>
+      </div>
+    </div>
+  </section>
+
+  <section id="scr-pick" class="screen float" hidden>
+    <div class="panel" style="display:grid;gap:14px">
+      <div style="display:flex;align-items:center;gap:10px"><h2 style="flex:1">Choose a pack</h2><button class="btn small ghost" data-go="menu">Back</button></div>
+      <div class="pick-list" id="pickList"></div>
+      <div class="seg" id="modeSeg">
+        <button data-mode="pack" aria-pressed="true">Pack run<small>Every question once</small></button>
+        <button data-mode="endless" aria-pressed="false">Endless<small>Until you run out of steam</small></button>
+      </div>
+      <button class="btn primary big" id="btnStart">Start run</button>
+    </div>
+  </section>
+
+  <section id="scr-lib" class="screen sheet" hidden>
+    <div class="sheet-inner">
+      <div class="sheet-top">
+        <button class="btn small" data-go="menu">← Menu</button>
+        <h2>Library</h2>
+        <div class="tabs" role="tablist">
+          <button role="tab" id="tabMine" aria-selected="true">My library</button>
+          <button role="tab" id="tabPub" aria-selected="false">Public</button>
+        </div>
+      </div>
+      <div id="libMine">
+        <div class="toolbar" style="margin-bottom:12px">
+          <button class="btn primary small" id="btnNew">+ New pack</button>
+          <button class="btn small" id="btnImport">Import JSON</button>
+        </div>
+        <div class="packs" id="mineList"></div>
+      </div>
+      <div id="libPub" hidden>
+        <div class="toolbar" style="margin-bottom:12px">
+          <input class="inp" id="pubSearch" placeholder="Search public packs" style="flex:1;min-width:160px">
+          <select class="sel" id="pubSort" aria-label="Sort public packs"><option value="new">Newest</option><option value="pop">Popular</option><option value="plays">Most played</option></select>
+          <button class="btn small" id="btnPubRefresh">Refresh</button>
+        </div>
+        <div class="packs" id="pubList"></div>
+      </div>
+    </div>
+  </section>
+
+  <section id="scr-edit" class="screen sheet" hidden>
+    <div class="sheet-inner">
+      <div class="sheet-top">
+        <button class="btn small" id="btnEditBack">← Library</button>
+        <h2 id="edTitleH">Edit pack</h2>
+      </div>
+      <div class="field"><label for="edTitle">Pack name</label><input class="inp" id="edTitle" maxlength="60"></div>
+      <div class="field"><label for="edDesc">Description <span class="muted" style="font-weight:400">(optional)</span></label><input class="inp" id="edDesc" maxlength="140"></div>
+      <div class="mdbar" id="mdbar" role="toolbar" aria-label="Formatting">
+        <span class="lbl">Format</span>
+        <button data-md="**" title="Bold"><b>B</b></button>
+        <button data-md="*" title="Italic"><i>I</i></button>
+        <button data-md="__" title="Underline"><u>U</u></button>
+        <button data-md="~~" title="Strikethrough"><s>S</s></button>
+        <button data-md="==" title="Highlight">Mark</button>
+        <button data-md="`" title="Code">&lt;/&gt;</button>
+        <span class="sep"></span>
+        <button class="sw" data-mdc="red" style="--c:#D0384F" title="Red" aria-label="Red"></button>
+        <button class="sw" data-mdc="green" style="--c:#2FA878" title="Green" aria-label="Green"></button>
+        <button class="sw" data-mdc="blue" style="--c:#3B7DD8" title="Blue" aria-label="Blue"></button>
+        <button class="sw" data-mdc="gold" style="--c:#E0A526" title="Gold" aria-label="Gold"></button>
+        <button class="sw" data-mdc="purple" style="--c:#8E5BD6" title="Purple" aria-label="Purple"></button>
+        <button class="sw" data-mdc="orange" style="--c:#E0782E" title="Orange" aria-label="Orange"></button>
+      </div>
+      <p class="hint">Select text in any question, choice or explanation, then tap a format. Or type it: <code>**bold**</code> <code>*italic*</code> <code>==highlight==</code> <code>{red|colored}</code>. Keep questions ≤ 140 visible characters and choices ≤ 48.</p>
+      <div id="edQs" style="display:grid;gap:12px"></div>
+      <button class="btn" id="btnAddQ">+ Add question</button>
+      <div class="savebar">
+        <p class="err" id="edErr"></p>
+        <button class="btn" id="btnEditCancel">Cancel</button>
+        <button class="btn primary" id="btnEditSave">Save pack</button>
+      </div>
+    </div>
+  </section>
+
+  <section id="scr-results" class="screen float" hidden>
+    <div class="panel" style="display:grid;gap:14px">
+      <div class="eyebrow" id="rReason" style="text-align:center">Run complete</div>
+      <div class="big-score" id="rScore">0</div>
+      <div class="newbest" id="rBest" hidden>★ New best score</div>
+      <div class="stats">
+        <div class="stat"><b id="rCorrect">0/0</b><small>Correct</small></div>
+        <div class="stat"><b id="rStreak">0</b><small>Best streak</small></div>
+        <div class="stat"><b id="rDist">0</b><small>Metres</small></div>
+      </div>
+      <div id="rReviewWrap"><div class="eyebrow" style="margin-bottom:6px">Review</div><ul class="review" id="rReview"></ul></div>
+      <button class="btn small like" id="rLike" hidden aria-pressed="false">👍 Like this pack</button>
+      <div class="row"><button class="btn" data-go="menu">Menu</button><button class="btn primary" id="btnAgain">Run again</button></div>
+    </div>
+  </section>
+
+  <section id="scr-pause" class="screen float" hidden>
+    <div class="panel" style="display:grid;gap:12px;max-width:340px">
+      <h2 style="text-align:center">Paused</h2>
+      <button class="btn primary big" id="btnResume">Resume</button>
+      <button class="btn" id="btnQuit">Quit to menu</button>
+    </div>
+  </section>
+
+  <section id="scr-account" class="screen float" hidden>
+    <div class="panel" style="display:grid;gap:12px">
+      <h2>Account</h2>
+      <div id="acctBody" style="display:grid;gap:12px"></div>
+    </div>
+  </section>
+
+  <section id="scr-help" class="screen float" hidden>
+    <div class="panel" style="display:grid;gap:14px;max-width:520px">
+      <h2>How to play</h2>
+      <div class="help-grid">
+        <div><span class="ic"><kbd>←→</kbd></span><span>Switch lanes with the arrows, A/D or 1–4. On touch, swipe, tap a side, or tap an answer chip.</span></div>
+        <div><span class="ic">✦</span><span>The right door hides a gem. A wrong door drops a rock and cuts your speed.</span></div>
+        <div><span class="ic">🔥</span><span><b>Fever:</b> five correct in a row makes points ×3 until you miss.</span></div>
+        <div><span class="ic">👑</span><span><b>Boss gate</b> every 5th question: answers reveal one by one and you get less time. A right answer pays ×5 points. A wrong one drops a boulder that cuts your speed to 40% and smashes through shields.</span></div>
+        <div><span class="ic">🏮</span><span><b>Lantern:</b> run through it to burn away one wrong curtain.</span></div>
+        <div><span class="ic">🛡</span><span><b>Shield</b> blocks one rock. <b>⏳ Slow-mo</b> gives you more time to think. <b>2×</b> doubles points for 20 s.</span></div>
+        <div><span class="ic">✓✗</span><span>True/False gates have green and red curtains. “Any correct” gates have more than one right door.</span></div>
+        <div><span class="ic"><kbd>Esc</kbd></span><span>Pause.</span></div>
+      </div>
+      <button class="btn primary" data-go="menu">Got it</button>
+    </div>
+  </section>
+
+  <div id="modal" hidden><div class="panel" id="modalBody"></div></div>
+  <div id="toast" role="status"></div>
+</div>
+
+<script src="vendor/supabase.js"></script>
+<script src="config.js?v=202609200106"></script>
+<script src="app.js?v=202609200106"></script>
+<script>
+if ("serviceWorker" in navigator && (location.protocol === "https:" || location.hostname === "localhost")) addEventListener("load", () => navigator.serviceWorker.register("sw.js").catch(() => {}));
+</script>
+</body>
+</html>
