@@ -351,7 +351,11 @@ function supaBackend(sb){
       if (r.error && r.error.code !== "23505") throw r.error;
     },
     async sendCode(email){ const {error} = await sb.auth.signInWithOtp({email, options:{shouldCreateUser:true}}); if (error) throw error; },
-    async verify(email, token){ const {error} = await sb.auth.verifyOtp({email, token, type:"email"}); if (error) throw error; },
+    async verify(email, token){
+      let r = await sb.auth.verifyOtp({email, token, type:"email"});
+      if (r.error) { const r2 = await sb.auth.verifyOtp({email, token, type:"signup"}); if (!r2.error) return; }
+      if (r.error) throw r.error;
+    },
     async signOut(){ await sb.auth.signOut(); },
   };
   sb.auth.onAuthStateChange((ev, session) => {
@@ -392,7 +396,7 @@ async function connect(){
     try { [db, userCap, downloadsCap] = await Promise.all([C.use("db"), C.use("user"), C.use("downloads")]); } catch {}
     if (userCap) { try { uid = await userCap.id(); } catch {} }
     if (db && uid) { B = claudeBackend(db, uid, userCap); pullMerge(); }
-  } else if (window.supabase?.createClient && CFG.supabaseUrl && CFG.supabaseAnonKey && !/YOUR-/.test(CFG.supabaseUrl)) {
+  } else if (window.supabase?.createClient && CFG.supabaseUrl && CFG.supabaseAnonKey && !/YOUR-/.test(CFG.supabaseUrl) && !/PASTE-/.test(CFG.supabaseAnonKey)) {
     try {
       const sb = window.supabase.createClient(CFG.supabaseUrl, CFG.supabaseAnonKey, {auth:{persistSession:true, autoRefreshToken:true, detectSessionInUrl:false}});
       B = supaBackend(sb);
@@ -537,7 +541,7 @@ async function verifyCode(){
   if (acct.busy) return;
   acct.busy = true; acct.err = ""; renderAccount();
   try { await B.verify(acct.email, code); acct.step = "email"; acct.code = ""; toast("Signed in. Syncing your progress…"); }
-  catch(e){ acct.err = /expired|invalid/i.test(e?.message||"") ? "That code is wrong or has expired. Check it, or send a new one." : "Couldn't sign in. " + (e?.message || ""); }
+  catch(e){ acct.err = /expired|invalid/i.test(e?.message||"") ? "That code didn't work. Use the code from the newest email (each resend replaces the old code), or tap Resend." : "Couldn't sign in. " + (e?.message || ""); }
   acct.busy = false; renderAccount();
 }
 
